@@ -56,7 +56,53 @@ var members = drivers.Select(x => new
     MemberId = group.Min(x => x.MemberId)
 }).ToList();
 
-//JoinAndSplit
+//JoinAndSplit String
 string.Join(',', a.RestrictionOwners.Select(x => x.MemberId))
 RestrictionOwnerIds = grouped.Key.Split(',').Select(x => Convert.ToInt32(x)).ToList()
 
+//Join Tables And Query
+                                return await (from v in context.TerminalTimeslotVehicles
+                    .Include(x => x.Events)
+                    .Include(x => x.EventTimeslotVehicles)
+                    .Include(x => x.Calls)
+                    .Include(x => x.TerminalTimeslot).ThenInclude(x => x.TerminalSetting)
+                    .Include(x => x.TerminalTimeslotVehicleToRestrictions)
+                    .ThenInclude(x => x.TerminalRestriction)
+                    .ThenInclude(x => x.Crops)
+                    .ThenInclude(x => x.CropWithParameterCombinationToTerminalRestrictionGroupCrops)
+                    .ThenInclude(x => x.TerminalAdditionalParameterCombination)
+                    .ThenInclude(x => x.ParameterToTerminalAdditionalParameterCombinations)
+                    .ThenInclude(x => x.TerminalAdditionalParameter)
+                                              join tt in context.TerminalTimeslots on v.TerminalTimeslotId equals tt.Id
+                                              join ts in context.TerminalSettings on tt.TerminalSettingId equals ts.Id
+                                              where ts.TerminalId == terminalId && v.Deleted == null &&
+                                                    tt.Date.AddMinutes(ts.TimeslotDuration * tt.TimeslotNumber) >= DateTimeHelper.Now().AddDays(-1) &&
+                                                    tt.Date.AddMinutes(ts.TimeslotDuration * tt.TimeslotNumber) <= DateTimeHelper.Now().AddMinutes(forecastMinutes)
+                                              select v).ToListAsync(token);
+
+
+
+foreach (var timeslotVehicle in terminalVehicles)
+{
+    await _context.Entry(timeslotVehicle).Reference(x => x.TerminalTimeslot).LoadAsync();
+    await _context.Entry(timeslotVehicle).Collection(x => x.Events).LoadAsync();
+    await _context.Entry(timeslotVehicle).Collection(x => x.EventTimeslotVehicles).LoadAsync();
+    await _context.Entry(timeslotVehicle).Collection(x => x.Calls).LoadAsync();
+}
+
+var timeslotVehicleWithStatuses = _terminalTimeslotVehicleStatusService
+    .GetTerminalTimeslotVehicleDictionaryWithStatuses(terminalVehicles, setting);
+
+foreach (var terminalVehicle in terminalVehicles)
+{
+    await _context.Entry(terminalVehicle)
+        .Collection(x => x.TerminalTimeslotVehicleToRestrictions)
+        .Query()
+        .Include(x => x.TerminalRestriction)
+        .ThenInclude(x => x.Crops)
+        .ThenInclude(x => x.CropWithParameterCombinationToTerminalRestrictionGroupCrops)
+        .ThenInclude(x => x.TerminalAdditionalParameterCombination)
+        .ThenInclude(x => x.ParameterToTerminalAdditionalParameterCombinations)
+        .ThenInclude(x => x.TerminalAdditionalParameter)
+        .LoadAsync();
+}
