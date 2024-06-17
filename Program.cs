@@ -106,3 +106,43 @@ foreach (var terminalVehicle in terminalVehicles)
         .ThenInclude(x => x.TerminalAdditionalParameter)
         .LoadAsync();
 }
+
+//Join Tables And Let
+
+return (from a in terminalTimeslotVehicles
+let outUnloadingEvent = a.EventVehicles
+	.Where(x => x.AreaType == AreaType.Unloading
+	            && x.EventType == EventType.VehicleOutArea).FirstOrDefault()
+let unloadedEvent = a.EventTimeslotVehicles
+	.Where(x => x.Parameters.WeightUnloaded > 0
+	            && x.EventType == EventType.DriverLoadingCompleted)
+where !unloadedEvent.Any() && outUnloadingEvent != null
+
+//Action
+DateTimeHelper.OverrideNow(() => DateTime.Today.AddHours(10).AddMinutes(DateTime.Now.Minute).AddSeconds(DateTime.Now.Second));
+DateTimeHelper.OverrideNowUtc(() => DateTime.Today.AddHours(7).AddMinutes(DateTime.Now.Minute).AddSeconds(DateTime.Now.Second));
+
+public static class DateTimeHelper
+{
+    private static Func<DateTime> GetNow = () => DateTime.Now;
+    private static Func<DateTime> GetNowUtc = () => DateTime.UtcNow;
+
+    public static DateTime Now()
+    {
+        return GetNow.Invoke();
+    }
+
+    public static DateTime UtcNow()
+    {
+        return GetNowUtc.Invoke();
+    }
+
+    public static void OverrideNow(Func<DateTime> newNow)
+    {
+        GetNow = newNow;
+    }
+    public static void OverrideNowUtc(Func<DateTime> newNow)
+    {
+        GetNowUtc = newNow;
+    }
+}
