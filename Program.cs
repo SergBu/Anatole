@@ -124,7 +124,7 @@ DateTimeHelper.OverrideNow(() => DateTime.Today.AddHours(10).AddMinutes(DateTime
 DateTimeHelper.OverrideNowUtc(() => DateTime.Today.AddHours(7).AddMinutes(DateTime.Now.Minute).AddSeconds(DateTime.Now.Second));
 
 //call
-
+var date = DateTimeHelper.UtcNow(); 
 public static class DateTimeHelper
 {
     private static Func<DateTime> GetNow = () => DateTime.Now;
